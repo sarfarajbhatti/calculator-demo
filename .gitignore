@@ -1,0 +1,22 @@
+# Virtual Environment
+venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+
+# Pytest
+.pytest_cache/
+
+# SonarQube
+.scannerwork/
+
+# Coverage
+.coverage
+coverage.xml
+
+# VS Code
+.vscode/
+
+# Logs
+*.log
