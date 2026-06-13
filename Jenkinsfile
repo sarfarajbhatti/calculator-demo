@@ -1,59 +1,62 @@
 pipeline {
-    agent any
+agent any
 
-    stages {
+stages {
 
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/sarfarajbhatti/calculator-demo.git'
-            }
+    stage('Checkout') {
+        steps {
+            git branch: 'main',
+                url: 'https://github.com/sarfarajbhatti/calculator-demo.git'
         }
+    }
 
-        stage('Build') {
-            steps {
+    stage('Build') {
+        steps {
+            sh '''
+            python3 -m venv venv
+            . venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest pytest-cov
+            '''
+        }
+    }
+
+    stage('Unit Test') {
+        steps {
+            sh '''
+            . venv/bin/activate
+            export PYTHONPATH=$(pwd)
+            pytest --cov=app --cov-report=xml
+            '''
+        }
+    }
+
+    stage('SonarQube Analysis') {
+        steps {
+            withSonarQubeEnv('SonarQube') {
                 sh '''
-                python3 -m venv venv
                 . venv/bin/activate
-                pip install -r requirements.txt
-                pip install pytest pytest-cov
+                export PYTHONPATH=$(pwd)
+                sonar-scanner
                 '''
             }
         }
+    }
 
-        stage('Unit Test') {
-            steps {
-                sh '''
-                . venv/bin/activate
-                pytest --cov=app --cov-report=xml
-                '''
+    stage('Quality Gate') {
+        steps {
+            timeout(time: 10, unit: 'MINUTES') {
+                waitForQualityGate abortPipeline: true
             }
         }
+    }
 
-        stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv('SonarQube') {
-                    sh '''
-                    . venv/bin/activate
-                    sonar-scanner
-                    '''
-                }
-            }
-        }
-
-        stage('Quality Gate') {
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }
-
-        stage('Email for Approval') {
-            steps {
-                mail to: 'your-email@gmail.com',
-                     subject: "Approval Needed for Deployment",
-                     body: """
+    stage('Email for Approval') {
+    steps {
+        mail to: 'bhattisarfarajkhan97@gmail.com',
+             subject: 'Approval Needed for Deployment',
+             body: """
 Build #${env.BUILD_NUMBER} passed SonarQube Quality Gate.
 
 Approve Deployment:
@@ -61,22 +64,35 @@ ${env.BUILD_URL}
 
 Open Jenkins and click Proceed.
 """
-            }
-        }
+    }
+}
 
-        stage('Manual Approval') {
-            steps {
-                timeout(time: 30, unit: 'MINUTES') {
-                    input message: 'Approve deployment?',
-                          ok: 'Deploy'
-                }
-            }
-        }
 
-        stage('Deploy') {
-            steps {
-                echo 'Deploying Calculator Application...'
+    stage('Manual Approval') {
+        steps {
+            timeout(time: 30, unit: 'MINUTES') {
+                input message: 'Approve deployment?',
+                      ok: 'Deploy'
             }
         }
     }
+
+    stage('Deploy') {
+        steps {
+            echo 'Deploying Calculator Application...'
+        }
+    }
+}
+
+post {
+    success {
+        echo 'Pipeline completed successfully!'
+    }
+
+    failure {
+        echo 'Pipeline failed!'
+    }
+}
+
+
 }
