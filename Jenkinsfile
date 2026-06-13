@@ -1,8 +1,5 @@
 pipeline {
 agent any
- tools {
-        sonarQubeScanner 'SonarScanner'
-    }
 stages {
 
     stage('Checkout') {
@@ -34,17 +31,18 @@ stages {
         }
     }
 
-    stage('SonarQube Analysis') {
-        steps {
-            withSonarQubeEnv('SonarQube') {
-                sh '''
-                . venv/bin/activate
-                export PYTHONPATH=$(pwd)
-                sonar-scanner
-                '''
-            }
+stage('SonarQube Analysis') {
+    steps {
+        withSonarQubeEnv('SonarQube') {
+            sh '''
+            . venv/bin/activate
+            export PYTHONPATH=$(pwd)
+
+            /opt/sonar-scanner/bin/sonar-scanner
+            '''
         }
     }
+}
 
     stage('Quality Gate') {
         steps {
